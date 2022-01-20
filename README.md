@@ -5,11 +5,17 @@
 ### Generate simulations
 Use the `SCM` class to make a seizing cortical model simulation. There are lots of options in here, but what's shown below will generate the simulations with the same parameters from Figure 1 of [REF](doi). 
 
-The property `base_dir` controls where the simulations are saved. The default behavior is to save everything in a folder called 'SCM' in your current working directory. The full state of the simulation is saved at `t_step` s intervals in files with names like `<basename>_<sim_num>_<t0>.mat`. The simulated MEA data (the small subregion of the simulation that mimics an MEA recording) is saved to `<base_dir>\<label>_Seizure<sim_num>_MEA_<padding[1]>_<padding[2]>.mat`. 
+The property `base_dir` controls where the simulations are saved. The default behavior is to save everything in a folder called 'SCM' in your current working directory. The full state of the simulation is saved at `t_step` s intervals in files with names like `~/SCM/LABEL/LABEL_NN_TTT.mat`, where _NN_ represents the simulation number (`SCM.sim_num`) and _TTT_ is the starting time of the segment. The simulated MEA data (the small subregion of the simulation that mimics an MEA recording) is saved to `~/SCM/LABEL_SeizureNN_MEA_PP_PP.mat`, where _PP_ indicates the duration of the pre- and post-ictal periods (`SCM.padding`). In both naming schemes, _LABEL_ is any string value (`SCM.label`).
 
 Figure 1A: A fixed source simulation (no ictal wavefront)
 ```matlab
 scm = SCM('FS');
+
+% Use the following to see where the outputs will be saved:
+disp(scm.basename);
+disp(scm.mea_path);
+
+% Start the simulation
 scm.Run();
 ```
 
@@ -37,11 +43,38 @@ mea = MEA(<path_to_mea_file>);
 ### Identify ictal wavefronts
 ```matlab
 iw = mea.IW();
-iw.plot9)
+iw.plot()
+iw.plot2D()
 ```
 
 ### Estimate traveling wave directions
+The following will save the wave direction estimates to a folder called
+'WaveFits' in your current directory. The D-method can take a long time to 
+run, so we have provided a helper script ([d10_helper.m](helpers/d10_helper.m))
+that runs the analysis in segments and allows you to pick up where you left off
+if your run is interrupted by simply re-running `d10_helper;` (with the same `mea`
+variable) until the analysis is complete.
+
 ```matlab
+mea = MEA(<path_to_mea_file>);
+s = mkdir(['WaveFits/' mea.Name]);
+
+% M-method direction estimatees
+times = mea.get_discharge_times('lfp_cross');
+M = mea.max_descent(times, 'halfwin', 0.05);
+save(fullfile('WaveFits', mea.Name, 'M'), 'M');
+
+% D-method direction estimates
+% This method is slow so it's more susceptible to interruption.
+% We recommend running this in segments rather than trying to 
+% do the whole thing at once. To do so, repeatedly run the script 
+%           d10_helper;
+% until the full seizure is analyzed. 
+step = 0.1;
+times = mea.Time(1):step:mea.Time(end);
+D = mea.delays(times, ...
+        'halfwin', 5, 'fband', [1 13], 'minfreq', 3);
+save(fullfile('WaveFits', mea.Name, 'D'), 'D');
 ```
 
 
