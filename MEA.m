@@ -1,14 +1,14 @@
 classdef MEA < handle & matlab.mixin.Copyable
 
 	properties 
-        Name
+        Patient char
+        Seizure char
 		Data
 		Duration
         Padding
 		Map
 		Position
         Units = '0.25 microvolts'
-        GridSize = [10 10]  % unless it's a sim
         AcquisitionSystem
         BadChannels
         
@@ -18,15 +18,12 @@ classdef MEA < handle & matlab.mixin.Copyable
 	
 	properties (Transient = true)
 		locs
-		patient
-		seizure
 		Raw
 		AllTime
 		MaxDescentData
         IsSim = 0
-	end
-	
-	properties (Transient = true)
+        GridSize
+        Name
         
         SamplingRate = 1000
         Time
@@ -35,7 +32,6 @@ classdef MEA < handle & matlab.mixin.Copyable
         ArtefactThresh (1, 1) double {mustBeNonnegative} = 16  % stdev
         MinEventSeparation (1, 1) double {mustBeNonnegative} = 1  % ms
         EventThresh (1, 1) double {mustBeNonnegative} = 4  % stdev
-        
         
 		SRO
 		lfp
@@ -78,8 +74,8 @@ classdef MEA < handle & matlab.mixin.Copyable
 		function mea = load(mea)
 			temp = load(mea.Path);
 			mea.SRO = temp.SamplingRate;
-            mea.AllTime = linspace(-temp.Padding(1), ...
-                temp.Duration + temp.Padding(2), size(temp.Data, 1))';
+            mea.Raw = temp.Data;
+            mea.AllTime = temp.Time;
 			
             for f = fieldnames(temp)'
                 switch f{:}
@@ -91,30 +87,25 @@ classdef MEA < handle & matlab.mixin.Copyable
                         continue
                 end
             end
-            
-            
-			[mea.patient, mea.seizure] = mea.get_info(mea.Path);
-            
-            mea.Raw = temp.Data;
-            
-            
+
         end
         
         function mea_struct = save(mea, path)
             % Saves to a struct rather than to an MEA object
             if nargin < 2, path = pwd; end
             
+            bad_chan = mea.BadChannels;
+            mea.BadChannels = [];
+            
             mea_struct = struct( ...
-                'Name', mea.Name, ...
                 'SamplingRate', mea.SRO, ...
-                'Time', @() linspace(-mea.Padding(1), mea.Duration + mea.Padding(2), size(mea.Raw, 1)), ...
-                'BadChannels', mea.BadChannels ...
+                'Time', single(mea.AllTime), ...
+                'BadChannels', bad_chan, ...
+                'Data', mea.Raw ...
                 );
             
-            mea.BadChannels = [];
-            mea_struct.Data = mea.Raw;
-            for ff = ["Duration", "Padding", "Map", "Position", "Units", ...
-                    "GridSize", "AcquisitionSystem"]
+            for ff = ["Patient", "Seizure", "Duration", "Padding", "Map", ...
+                    "Position", "Units", "GridSize", "AcquisitionSystem"]
                 mea_struct.(ff) = mea.(ff);
             end
             
@@ -171,16 +162,9 @@ classdef MEA < handle & matlab.mixin.Copyable
             iw = mea.IW;
         end
         
-        
-		function name = get.Name(mea)
-            if isempty(mea.Name)
-                si = SeizureInfo;
-                ind = find(strcmpi(si.patient, mea.patient) & si.seizure == str2double(mea.seizure));
-                mea.Name = sprintf('P%d_Seizure%d', si.patientAlt(ind), si.seizureAlt(ind));
-            end
-			name = mea.Name;
+        function gs = get.GridSize(mea)
+            gs = size(mea.Map);
         end
-        
         
 		function active = get.Active(mea)
 			active = (mea.Time > 0) & (mea.Time < mea.Time(end) - mea.Padding(2));
@@ -194,7 +178,6 @@ classdef MEA < handle & matlab.mixin.Copyable
                 		
 		function raw = get.Raw(mea)
 			
-			if isempty(mea.Raw); mea.load; end
             raw = mea.Raw;
 			raw(:, mea.BadChannels) = [];
         end
@@ -352,19 +335,9 @@ classdef MEA < handle & matlab.mixin.Copyable
 			end
         end
         
-        
-		function m = all_metrics(s)
-			m = fieldnames(s.Fits);
+        function name = get.Name(mea)
+            name = sprintf('%s_Seizure%s', mea.Patient, mea.Seizure);
         end
-        
-        
-        function fit = get.Fits(s)
-            if isempty(s.Fits)
-                s.Fits = WaveProp.load(s);
-            end
-            fit = s.Fits;
-        end
-                
         
 		function [inds, dist] = time2inds(mea, times)
 			inds = interp1(mea.Time, 1:length(mea.Time), times, 'nearest', 'extrap');
@@ -384,7 +357,7 @@ classdef MEA < handle & matlab.mixin.Copyable
     end
 	
     
-	methods % wave fitting
+	methods % Wrappers for wave fitting and IW detection functions
         
         function [out, M] = get_IW_templates(mea, M, win, max_templates, method)
             % [out, M] = get_IW_templates(mea, M=::saved Miw::, win=4, max_templates=Inf, method)
@@ -532,16 +505,6 @@ classdef MEA < handle & matlab.mixin.Copyable
         end
         
         
-		function [patient, seizure] = get_info(path)
-            % Assumes names of the form "PPP_SeizureSSS" where PPP and SSS
-            % are the patient and seizure, respectively
-			[~, data] = fileparts(path);
-			data = strsplit(data, '_');
-			patient = data{1};
-			seizure = data{2}(8:end);
-		end
-		
-		
 		function [data, band] = filter(data, sampling_rate, band)
             % data = filter(data, sampling_rate, band, use_high_filter_order=false);  % (static)
             % Filters <data> to <band> using 150-order bandpass FIR filter
@@ -708,11 +671,11 @@ classdef MEA < handle & matlab.mixin.Copyable
 				'', '\pi/2', '', '\pi'});
 			ylabel(ax, {'Direction', 'Normalized Signal'})
 			xlabel(ax, 'Time (s)');
-			title(ax, [s.patient ' ' s.seizure]);
+			title(ax, [s.Patient ' ' s.Seizure]);
 			ax.NextPlot = NP;
 			fr.ax = ax;
 			fr.frline = frline;
-			fr.name = ['figs/' s.patient '_' s.seizure '_plot'];
+			fr.name = ['figs/' s.Patient '_' s.Seizure '_plot'];
         end
         
         
