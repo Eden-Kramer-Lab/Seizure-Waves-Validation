@@ -1,11 +1,14 @@
 # Seizure-Waves-Validation
 
+## Notes
+
+
 ## Usage
 
 ### Generate simulations
 Use the `SCM` class to make a seizing cortical model simulation. There are lots of options in here, but what's shown below will generate the simulations with the same parameters from Figure 1 of [REF](doi). 
 
-The property `base_dir` controls where the simulations are saved. The default behavior is to save everything in a folder called 'SCM' in your current working directory (`~/SCM`). The full state of the simulation is saved at 1 s intervals in files with names like 
+The property `base_dir` controls where the simulations are saved. The default behavior is to save everything in a folder called 'SCM' in the current working directory (`~/SCM`). The full state of the simulation is saved at 1 s intervals in files with names like 
   
     ~/SCM/LABEL/LABEL_NN_TTT.mat
     
@@ -44,6 +47,18 @@ scm.Run();
 </details>
 
 ### Load MEA data
+Assumes that the MEA data is stored in a .mat file with the following fields:
+
+    BadChannels                 11x1                     88  double                       
+    Data                   2700001x96            2073600768  double                       
+    Duration                     1x1                      8  double                       
+    GridSize                     1x2                     16  double                       
+    Map                         10x10                   800  double                       
+    Name                         1x11                    22  char                         
+    Padding                      1x2                     16  double                       
+    Position                    96x2                   1536  double                       
+    SamplingRate                 1x1                      8  double                       
+  
 ```matlab
 mea = MEA(<path_to_mea_file>);
 ```
@@ -89,5 +104,9 @@ d10_helper;
 
 ### Identify intervals with stable traveling wave directions
 
-
+```matlab
+M = load('WaveFits/P1_Seizure1/M.mat').M;
+dirs = M.stable_intervals();
+scatter(dirs.time, dirs.dir_trend, [], dirs.phase_num);
+```
 
