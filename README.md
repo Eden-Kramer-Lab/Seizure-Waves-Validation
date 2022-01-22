@@ -105,8 +105,9 @@ d10_helper;
 ### Identify intervals with stable traveling wave directions
 
 ```matlab
+% Load pre-saved discharge arrival times
 M = load('WaveFits/P1_Seizure1/M.mat').M;
-dirs = M.stable_intervals();
-scatter(dirs.time, dirs.dir_trend, [], dirs.phase_num);
+intervals = M.stable_intervals();
+scatter(intervals.time, intervals.dir_trend, [], intervals.phase_num);
 ```
 
