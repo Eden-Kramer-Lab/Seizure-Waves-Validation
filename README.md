@@ -49,15 +49,17 @@ scm.Run();
 ### Load MEA data
 Assumes that the MEA data is stored in a .mat file with the following fields:
 
-    BadChannels                 11x1                     88  double                       
-    Data                   2700001x96            2073600768  double                       
-    Duration                     1x1                      8  double                       
-    GridSize                     1x2                     16  double                       
-    Map                         10x10                   800  double                       
-    Name                         1x11                    22  char                         
-    Padding                      1x2                     16  double                       
-    Position                    96x2                   1536  double                       
-    SamplingRate                 1x1                      8  double                       
+    BadChannels                 18x1                        144  double              
+    Data                   1875001x96                 360000192  int16               
+    Duration                     1x1                          8  double              
+    Map                         10x10                       800  double              
+    Padding                      1x2                         16  double              
+    Patient                      1x2                          4  char                
+    Position                    96x2                       1536  double              
+    SamplingRate                 1x1                          8  double              
+    Seizure                      1x1                          2  char                
+    Time                         1x1875001              7500004  single              
+  
   
 ```matlab
 mea = MEA(<path_to_mea_file>);
