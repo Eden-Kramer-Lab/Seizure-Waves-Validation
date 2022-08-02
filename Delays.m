@@ -26,7 +26,7 @@ classdef Delays < WaveProp
         
         % Used to get the TOA, but no need to save afterward
         AllTime  % This will just be indices unless given as input
-        SamplingRate = 1  % Assumes 1 sample per second unless otherwise given
+        SamplingRate = 1000  % Assumes 1 sample per second unless otherwise given
         
     end
     
@@ -75,7 +75,8 @@ classdef Delays < WaveProp
                 return
             end
             
-			try signal = mea.Data; catch, signal = mea.data; end
+			% try signal = mea.Data; catch, signal = mea.data; end
+            signal = mea.LFP;
             
 			for ff = string(fieldnames(mea)')
 				switch lower(ff)

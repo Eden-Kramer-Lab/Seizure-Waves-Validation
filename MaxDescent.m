@@ -11,7 +11,7 @@ classdef MaxDescent < WaveProp
     properties (Transient = true)
         % Used to get the TOA, but no need to save afterward
         AllTime  % This will just be indices unless given as input
-        SamplingRate = 1  % Assumes 1 sample per second unless otherwise given
+        SamplingRate = 1000  % Assumes 1000 samples per second unless otherwise given
     end
 	
 	
@@ -36,7 +36,8 @@ classdef MaxDescent < WaveProp
                 obj.SamplingRate = mea.SamplingRate;
 				obj = obj.parse_inputs(varargin{:});
                 if isempty(mea.MaxDescentData)
-					mea.MaxDescentData = zscore(mea.filter(mea.Data, mea.SamplingRate, obj.FBand));
+					% mea.MaxDescentData = zscore(mea.filter(mea.Data, mea.SamplingRate, obj.FBand));
+                    mea.MaxDescentData = zscore(mea.LFP);
                 end
                 signal = mea.MaxDescentData;
             else  % Return the TOA based on the entire signal
@@ -119,35 +120,7 @@ classdef MaxDescent < WaveProp
         end
     end
         
-%% Old 
-% 		function [window, t] = get_window(obj, mea)
-% 			t_inds = abs(mea.Time - obj.t0) <= obj.HalfWin;
-% 			t = mea.Time(t_inds);
-% 			data = mea.MaxDescentData;
-%             if obj.Ascent, data = -data; end
-% 			window = data(t_inds, :);
-%         end
-%         
-% 		function data = get_data(M, window)
-% 			% Get the TOAs from the given window
-%             
-% 			window = window - window(1, :);  % set first time point as baseline (for visualization early)
-% 			
-%             if strcmpi(M.DiffsOrPeaks, 'peaks')
-%                 [change, time_point] = min(window);  % Find time of minimal peak
-%             else
-%                 [change, time_point] = min(diff(window, 1, 1));  % Find time of maximal descent
-%             end
-% 			non_decreasing = change >= 0;  % Find non-decreasing traces
-% 			bdry = (time_point == 1) | (time_point == size(window, 1) - 1);  % ... and traces with max descent on the boundary (these are not part of the wave and confuse the analysis)
-% 			inactive = range(window) < 1;
-% 			
-% 			data = time_point;
-% 			data(non_decreasing | bdry | inactive) = nan;
-% 			
-%         end
-%         
-% 	end
+
 	
 	
 	
